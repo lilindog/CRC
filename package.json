@@ -1,0 +1,26 @@
+{
+  "name": "CRC",
+  "description": "*就是crc计算库*",
+  "version": "0.0.1",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "preinstall": "node scripts/init-githooks.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lilindog/CRC.git"
+  },
+  "author": "lilindog <lilin@lilin.site> (https://github.com/lilindog)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lilindog/CRC/issues"
+  },
+  "homepage": "https://github.com/lilindog/CRC#readme",
+  "devDependencies": {
+    "eslint": "^8.18.0"
+  }
+}
