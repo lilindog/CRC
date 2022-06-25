@@ -1,83 +1,147 @@
 /**
+ * 查表法的表资源
+ * 使用查表法避免每字异或节位移计算，提升效率
+ */
+import {
+    crc16usb,
+    crc16xmodem,
+    crc32
+} from "./tables.mjs";
+
+/**
+ * 各种crc的参数模型
+ */
+const types = {
+    crc32: {
+        poly: 0x04c11db7,
+        init: 0xffffffff,
+        refin: true,
+        refout: true,
+        xorout: 0xffffffff,
+        table: crc32
+    },
+    crc16usb: {
+        poly: 0x8005,
+        init: 0xffff,
+        refin: true,
+        refout: true,
+        xorout: 0xffff,
+        table: crc16usb
+    },
+    crc16xmodem: {
+        poly: 0x1021,
+        init: 0x0000,
+        refin: false,
+        refout: false,
+        xorout: 0x0000,
+        table: crc16xmodem
+    }
+};
+
+const generateCountBin = count => {
+    let res = 1;
+    for (let i = 1; i < count; i++) {
+        res <<= 1;
+        res |= 1;
+    }
+    return res;
+};
+
+const getCrcWidth = poly => {
+    const len = binLen(poly);
+    let width = 0;
+    /** 姑且最大32位宽 */
+    for (let i = 0; i < 6; i++) {
+        if (len < 2 ** i) {
+            width = 2 ** i;
+            break;
+        }
+    }
+    if (width === 0) throw new Error(`[ getCrcWidth ] 计算出错`);
+    return width;
+};
+
+const binLen = num => {
+    let len = 0;
+    while (num) {
+        len++;
+        num = num / 2 | 0;
+    }
+    return len;
+};
+
+const reverseBin = (value = 0x00, len = 0) => {
+    if (!len) {
+        len = binLen(value);
+    }
+    let out = 0, i = 0;
+    for (; i < len; i++) {
+        out <<= 1;
+        out |= value >> i & 0x01;
+    }
+    return out;
+};
+
+/**
+ * CRC计算类
+ *
  * @class
- * @classdesc CRC计算类
  * @author lilindog<lilin@lilin.site>
  */
-class Crc {
-    static CrcTypes = {
-        crc32: {
-            _crcWidth: 32,
-            poly: 0x04c11db7,
-            init: 0xffffffff,
-            refin: true,
-            refout: true,
-            xorout: 0xffffffff,
-            table: [
+class CRC {
+    static Types = Reflect.ownKeys(types).reduce((res, k) => (res[k] = k, res), {});
 
-            ]
+    #type;
+
+    constructor (type = "") {
+        const keys = Reflect.ownKeys(types);
+        if (typeof type !== "string" || !keys.includes(type)) {
+            throw new Error(`[ CRC ] 构造函数type参数错误，参考：${keys.join("|")}。`);
         }
-    }
-    static BinLength (num = 0x00) {
-        let len = 0;
-        while (num) {
-            len++;
-            num = num / 2 | 0;
-        }
-        return len;
-    }
-    static ReveseBin (value = 0x00, len = 0) {
-        if (!len) {
-            len = Crc.BinLength(value);
-        }
-        let out = 0, i = 0;
-        for (; i < len; i++) {
-            out <<= 1;
-            out |= value >> i & 0x01;
-        }
-        return out;
-    }
-    type = null;
-    constructor (type) {
-        if (type === undefined || !Crc.CrcTypes[type]) {
-            throw new Error("type 错误，type可选值为：[" + Reflect.ownKeys(Crc.CrcTypes).join("|") + "]");
-        }
-        this.type = type;
+        this.#type = type;
     }
 
     /**
      * 计算crc的方法111
      *
      * @param {Uint8Array} data - 需要计算crc的数据
-     * @returns {Number} 返回crc吗
+     * @returns {Number} - 返回crc吗
      * @public
      */
     calc (data) {
-        const option = Crc.CrcTypes[this.type];
-        let
-            crc = option.init,
-            poly = option.refin ? Crc.ReveseBin(option.poly, option._crcWidth) : option.poly;
-        poly = poly < 0 ? poly + 0xffffffff + 1 : poly;
-        for (let i = 0; i < data.byteLength; i++) {
-            if (option.refin) {
-                crc ^= data[i];
-            } else {
-                crc ^= data[i] << option._crcWidth - 8;
-            }
-            for (let j = 0; j < 8; j++) {
-                if (option.refin) {
-                    crc & 0x01 ?
-                        crc = crc >>> 1 ^ poly :
-                        crc >>>= 1;
-                } else {
-                    crc & 0x01 << option._crcWidth - 1 ?
-                        crc = crc << 1 ^ poly :
-                        crc <<= 1;
-                }
+        if (!(data instanceof Uint8Array)) {
+            throw new Error(`[ CRC ] calc方法的data参数必须为Uint8Array`);
+        }
+        const
+            option = types[this.#type],
+            width = getCrcWidth(option.poly),
+            mask = generateCountBin(width);
+        let poly = option.poly;
+        if (option.refin) {
+            poly = reverseBin(poly, getCrcWidth(poly));
+            if (poly < 0) {
+                poly = poly + 0xffffffff + 1;
             }
         }
-        crc ^= option.xorout;
-        crc = crc < 0 ? crc + 0xffffffff + 1 : crc;
-        return option.refout ? Crc.ReveseBin(crc) : crc;
+
+        let
+            crc = option.init,
+            byte,
+            pos;
+        for (byte of data) {
+            if (option.refin) {
+                crc = crc ^ byte;
+                pos = crc & 0xff;
+                crc = (crc >>> 8) ^ option.table[pos];
+            } else {
+                crc = crc ^ (byte << width - 8);
+                pos = crc >> (width - 8) & 0xff;
+                crc = crc << 8 ^ option.table[pos];
+            }
+        }
+        crc = (crc ^ option.xorout) & mask;
+        if (crc < 0) crc += 0xffffffff + 1;
+        return crc;
     }
 
     /**
@@ -88,23 +152,38 @@ class Crc {
      * @public
      */
     verify (data) {
-        let r = 0, i = 0, { poly, refin, _crcWidth : crcWidth } = Crc.CrcTypes[this.type];
-        if (refin) poly = Crc.ReveseBin(poly);
-        for (; i < data.byteLength; i++) {
-            r ^= data[i];
-            for (let j = 0; j < 8; j++) {
-                if (refin) {
-                    r & 0x01 ?
-                        r ^= r >>> 1 ^ poly :
-                        r >>>= 1;
-                } else {
-                    r & 0x01 << crcWidth - 1 ?
-                        r = r << 1 ^ poly :
-                        r <<= 1;
-                }
+        data = data.slice();
+        const option = types[this.#type];
+        const width = getCrcWidth(option.poly);
+        if (option.refin) {
+            let i, tmp = data.slice(data.length - (width / 8));
+            for (i = tmp.length; i > 0; i--) {
+                data.set([
+                    /**
+                     * 在refin为true的情况下，我先把crc校验码字节进行异或
+                     * 这样方便些
+                     */
+                    tmp[i - 1] ^ option.init & 0xff
+                ], data.length - i);
             }
         }
-        console.log(r.toString(2));
-        return !Boolean(r);
+        let res = option.init, byte, poly = option.poly;
+        if (option.refin) {
+            poly = reverseBin(poly, width);
+            if (poly < 0) poly = poly + 0xffffffff + 1;
+        }
+        for (byte of data) {
+            if (option.refin) {
+                res ^= byte;
+                res = res >>> 8 ^ option.table[res & 0xff];
+            } else {
+                res ^= byte << width - 8;
+                res = res << 8 ^ option.table[res >>> width - 8];
+            }
+        }
+        res = res ^ option.xorout;
+        return res ^ generateCountBin(width);
     }
 }
+
+export default CRC;
