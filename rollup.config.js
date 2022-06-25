@@ -11,7 +11,7 @@ const getFirstCommitDate = () => {
 
 const banner = `+
 /**+
- * GBKCodec v${version}+
+ * CRC v${version}+
  * Author: ${author}+
  * Created: ${getFirstCommitDate()}+
  * Last Modify: ${new Date().toLocaleDateString()}+

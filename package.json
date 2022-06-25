@@ -3,12 +3,18 @@
   "description": "*就是crc计算库*",
   "version": "0.0.1",
   "main": "index.js",
+  "imports": {
+    "#CRC": "./src/CRC.class.mjs"
+  },
   "directories": {
     "example": "examples",
     "test": "test"
   },
   "scripts": {
-    "preinstall": "node scripts/init-githooks.js"
+    "preinstall": "node scripts/init-githooks.js",
+    "bench": "node benchmarks/index.mjs",
+    "test": "mocha",
+    "lint": "eslint"
   },
   "repository": {
     "type": "git",
@@ -21,6 +27,9 @@
   },
   "homepage": "https://github.com/lilindog/CRC#readme",
   "devDependencies": {
-    "eslint": "^8.18.0"
+    "babel-eslint": "^10.1.0",
+    "eslint": "^8.18.0",
+    "mocha": "^10.0.0",
+    "nanobench": "^2.1.1"
   }
 }
