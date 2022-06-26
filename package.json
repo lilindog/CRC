@@ -1,8 +1,8 @@
 {
   "name": "CRC",
-  "description": "*就是crc计算库*",
+  "description": "crc计算库",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "",
   "imports": {
     "#CRC": "./src/CRC.class.mjs"
   },

@@ -1,4 +1,3 @@
 "use strict"
 
-// const chalk = require("chalk");
-// console.log(chalk.green(" pre-push 暂时空置！"));
+console.log("pre-push 暂时空置！");
