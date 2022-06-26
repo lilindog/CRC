@@ -49,16 +49,13 @@ const generateCountBin = count => {
 
 const getCrcWidth = poly => {
     const len = binLen(poly);
-    let width = 0;
     /** 姑且最大32位宽 */
-    for (let i = 0; i < 6; i++) {
-        if (len < 2 ** i) {
-            width = 2 ** i;
-            break;
+    for (let v of [1, 2, 3, 4, 8, 16, 32]) {
+        if (len === v || len < v) {
+            return v;
         }
     }
-    if (width === 0) throw new Error(`[ getCrcWidth ] 计算出错`);
-    return width;
+    throw new Error(`[ getCrcWidth ] 计算出错`);
 };
 
 const binLen = num => {
@@ -89,8 +86,21 @@ const reverseBin = (value = 0x00, len = 0) => {
  * @author lilindog<lilin@lilin.site>
  */
 class CRC {
+
+    /**
+     * crc的类型map，用于实例化CRC时最为参数参考
+     *
+     * @type {Object}
+     * @static
+     */
     static Types = Reflect.ownKeys(types).reduce((res, k) => (res[k] = k, res), {});
 
+    /**
+     * crc类型参数模型
+     *
+     * @private
+     * @type {Object}
+     */
     #type;
 
     constructor (type = "") {
@@ -102,10 +112,10 @@ class CRC {
     }
 
     /**
-     * 计算crc的方法111
+     * 计算crc码的方法
      *
      * @param {Uint8Array} data - 需要计算crc的数据
-     * @returns {Number} - 返回crc吗
+     * @returns {Number} - 返回计算后的crc校验码
      * @public
      */
     calc (data) {
@@ -119,9 +129,6 @@ class CRC {
         let poly = option.poly;
         if (option.refin) {
             poly = reverseBin(poly, getCrcWidth(poly));
-            if (poly < 0) {
-                poly = poly + 0xffffffff + 1;
-            }
         }
 
         let
@@ -147,14 +154,15 @@ class CRC {
     /**
      * 验证crc
      *
-     * @param {Uint8Array} data
-     * @returns {Boolean}
+     * @param {Uint8Array} data - 需要校验的数据
+     * @returns {Number} - 返回校验结果，0为正确，非0则异常
      * @public
      */
     verify (data) {
         data = data.slice();
-        const option = types[this.#type];
-        const width = getCrcWidth(option.poly);
+        const
+            option = types[this.#type],
+            width = getCrcWidth(option.poly);
         if (option.refin) {
             let i, tmp = data.slice(data.length - (width / 8));
             for (i = tmp.length; i > 0; i--) {
@@ -170,7 +178,6 @@ class CRC {
         let res = option.init, byte, poly = option.poly;
         if (option.refin) {
             poly = reverseBin(poly, width);
-            if (poly < 0) poly = poly + 0xffffffff + 1;
         }
         for (byte of data) {
             if (option.refin) {
@@ -181,8 +188,9 @@ class CRC {
                 res = res << 8 ^ option.table[res >>> width - 8];
             }
         }
-        res = res ^ option.xorout;
-        return res ^ generateCountBin(width);
+        res = (res ^ option.xorout) & generateCountBin(width);
+        if (option.refin) res ^= generateCountBin(width);
+        return res;
     }
 }
 

@@ -1,12 +1,12 @@
 import CRC from "#CRC";
 
-const crc = new CRC("crc32");
+const crc = new CRC("crc16xmodem");
 
 const res = crc.calc(new Uint8Array([ 0x01, 0x02 ]));
 console.log(res.toString(16));
-const bytes = Array(4).fill().reduce((...[ bytes,,index ]) => {
-    console.log(index);
-    bytes.push(res >>>  ((4 - index - 1) * 8));
+const byteLen = 2;
+const bytes = Array(byteLen).fill().reduce((...[ bytes,,index ]) => {
+    bytes.push(res >>>  ((byteLen - index - 1) * 8));
     return bytes;
 }, []);
 const data = new Uint8Array([ 0x01, 0x02, ...bytes ]);
