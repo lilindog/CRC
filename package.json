@@ -14,7 +14,7 @@
     "preinstall": "node scripts/init-githooks.js",
     "bench": "node benchmarks/index.mjs",
     "test": "mocha",
-    "lint": "eslint"
+    "lint": "eslint src/CRC.class.mjs"
   },
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/lilindog/CRC#readme",
   "devDependencies": {
-    "babel-eslint": "^10.1.0",
+    "@babel/eslint-parser": "^7.18.2",
     "eslint": "^8.18.0",
     "mocha": "^10.0.0",
     "nanobench": "^2.1.1"

@@ -1,5 +1,4 @@
 import CRC from "#CRC";
-
 const crc = new CRC("crc16xmodem");
 
 const res = crc.calc(new Uint8Array([ 0x01, 0x02 ]));

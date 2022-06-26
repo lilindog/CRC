@@ -128,7 +128,9 @@ class CRC {
             mask = generateCountBin(width);
         let poly = option.poly;
         if (option.refin) {
+            /* eslint-disable */
             poly = reverseBin(poly, getCrcWidth(poly));
+            /* eslint-enable */
         }
 
         let
@@ -177,7 +179,9 @@ class CRC {
         }
         let res = option.init, byte, poly = option.poly;
         if (option.refin) {
+            /* eslint-disable */
             poly = reverseBin(poly, width);
+            /* eslint-enable */
         }
         for (byte of data) {
             if (option.refin) {
